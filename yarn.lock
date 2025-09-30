@@ -5158,10 +5158,10 @@ path-type@^4.0.0:
   resolved "https://registry.yarnpkg.com/path-type/-/path-type-4.0.0.tgz#84ed01c0a7ba380afe09d90a8c180dcd9d03043b"
   integrity sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==
 
-pawnote@1.4.1:
-  version "1.4.1"
-  resolved "https://registry.yarnpkg.com/pawnote/-/pawnote-1.4.1.tgz#cf1220e93650abc2d50789774070a375962c8cea"
-  integrity sha512-jdFHfyZ7tIRJ03etegs/ExgW2F2KZDPbOq6atjs6Fi1DINl893QLfVIxLwADb+tGQbYifYwwOurv4QZQ1OJZ8Q==
+pawnote@^1.6.2:
+  version "1.6.2"
+  resolved "https://registry.yarnpkg.com/pawnote/-/pawnote-1.6.2.tgz#90730d6ce454cb7380770e22e18ff5d401183cd7"
+  integrity sha512-K+qItgqju/LR+uGG/7YquvHBpwxwhBJ2buGjU+Zlh2gP+9kEgi9qnyHsSUNjUGvsQHZtgV4n1JklI7N0FNyDKQ==
   dependencies:
     "@literate.ink/utilities" "1.0.0-10641118381.1"
     html-entities "^2.5.2"
