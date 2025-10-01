@@ -38,33 +38,13 @@ async function get_grades(session) {
         allGrades.push({
           subject: subject,
           period: period,
-          averages: {},
+          averages: gradesOverview.subjectsAverages.find(
+            avg => avg.subject?.name === subject?.name
+          ),
           grades: [grade]
         })
       } else {
         allGrades[subjectIndex].grades.push(grade)
-      }
-    }
-
-    // For each average, get the subject and add it to the list
-    for (const averageKey of ['classAverage', 'overallAveragegradesOverview']) {
-      const average = gradesOverview[averageKey]
-      // Get the subject of the average
-      const subject = average?.subject
-
-      // Find the subject in the list of all subjects
-      const subjectIndex = allGrades.findIndex(
-        item => item.subject?.name === subject?.name && item?.period === period
-      )
-      if (subjectIndex === -1) {
-        allGrades.push({
-          subject: subject,
-          period: period,
-          averages: {},
-          grades: []
-        })
-      } else {
-        allGrades[subjectIndex].averages = average
       }
     }
   }
@@ -272,12 +252,12 @@ async function createGrades(session, fields, options) {
         label: evl.comment.trim() !== '' ? evl.comment : null,
         date: new Date(evl.date).toISOString(),
         value: {
-          student: evl.value,
-          outOf: evl.outOf,
+          student: evl.value.kind == 0 ? evl.value.points : null,
+          outOf: evl.outOf.kind == 0 ? evl.outOf.points : null,
           coef: evl.coefficient,
-          classAverage: evl.average,
-          classMax: evl.max,
-          classMin: evl.min
+          classAverage: evl.average.kind == 0 ? evl.average.points : null,
+          classMax: evl.max.kind == 0 ? evl.max.points : null,
+          classMin: evl.min.kind == 0 ? evl.min.points : null
         },
         status: {
           isBonus: evl.isBonus,
@@ -288,15 +268,6 @@ async function createGrades(session, fields, options) {
       evals.push(njs)
     }
 
-    let avgGrades
-    if (evals.length === 1) {
-      // When there is only one eval, pronote does not give the student average
-      const scaleMult = 20 / evals[0].value.outOf // Necessary to normalise grades not on /20
-      avgGrades = evals[0].value.student * scaleMult
-    } else {
-      avgGrades = grade.averages?.student
-    }
-
     // Create the doctype
     const json = {
       subject: processedCoursName,
@@ -305,10 +276,10 @@ async function createGrades(session, fields, options) {
       startDate: new Date(grade.period.startDate).toISOString(),
       endDate: new Date(grade.period.endDate).toISOString(),
       aggregation: {
-        avgGrades: avgGrades,
-        avgClass: grade.averages?.class_average,
-        maxClass: grade.averages?.max,
-        minClass: grade.averages?.min
+        avgGrades: grade.averages?.student?.kind == 0 && grade.averages?.student?.points || -1,
+        avgClass: grade.averages?.class_average?.kind == 0 && grade.averages?.class_average?.points || -1,
+        maxClass: grade.averages?.max?.kind == 0 && grade.averages?.max?.points || -1,
+        minClass: grade.averages?.min?.kind == 0 && grade.averages?.min?.points || -1,
       },
       series: evals,
       relationships:
