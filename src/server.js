@@ -36,7 +36,20 @@ async function start(fields) {
       // Use konnector-dev-config.json fields in standalone mode
       Object.assign(accountData, fields)
     }
-    const { session, loginResult } = await Pronote(accountData)
+    
+    // 30 secondes pour se connecter à Pronote -> sinon erreur HTTPS
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('LOGIN_TIMEOUT'))
+      }, 30000)
+    })
+    
+    // Faire rattraper Pronote au timeout
+    const { session, loginResult } = await Promise.race([
+      Pronote(accountData),
+      timeoutPromise
+    ])
+
     await this.saveAccountData({
       ...accountData,
       token: loginResult.token,
@@ -87,6 +100,9 @@ async function start(fields) {
       throw new Error('LOGIN_FAILED')
     } else if (error.includes('Invalid URL')) {
       // Pronote URL is invalid
+      throw new Error('LOGIN_FAILED')
+    } else if (error.includes('LOGIN_TIMEOUT')) {
+      // Pronote login timed out (invalid URL or protocol)
       throw new Error('LOGIN_FAILED')
     } else if (
       JSON.stringify(err).toString().includes('Wrong user credentials')
