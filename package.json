@@ -38,8 +38,9 @@
     "cozy-flags": "^4.0.0",
     "cozy-konnector-libs": "5.12.1",
     "globals": "^15.8.0",
-    "pawnote": "1.4.1",
-    "pronote-api-maintained": "^3.1.0"
+    "pawnote": "^1.6.2",
+    "pronote-api-maintained": "^3.1.0",
+    "raw-loader": "^4.0.2"
   },
   "devDependencies": {
     "cozy-jobs-cli": "2.4.4",

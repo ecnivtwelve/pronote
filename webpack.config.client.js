@@ -5,5 +5,13 @@ module.exports = {
   output: {
     path: path.join(process.cwd(), 'build'),
     filename: 'main.js'
-  }
+  },
+  module: {
+    rules: [
+      {
+        test: /\.html$/i,
+        use: 'raw-loader',
+      },
+    ],
+  },
 }

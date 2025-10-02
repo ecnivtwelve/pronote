@@ -5,6 +5,8 @@ import { ContentScript } from 'cozy-clisk/dist/contentscript'
 import Minilog from '@cozy/minilog'
 import waitFor, { TimeoutError } from 'p-wait-for'
 
+import template from './utils/templates/pronote.html?raw'
+
 const DESKTOP_USER_AGENT =
   'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36'
 
@@ -18,6 +20,36 @@ monkeyPatch(UUID)
 
 window.SELECT_STYLE =
   'border-bottom: 1px solid var(--theme-foncee); box-shadow: 0 1px 0 0 var(--theme-foncee); width: 100%; padding: .4rem; padding-left: 2rem; font-size: var(--taille-m); margin: 0 0 .25rem 0;'
+
+  function cleanURL(url) {
+    let pronoteURL = url
+    if (
+      !pronoteURL.startsWith('https://') &&
+      !pronoteURL.startsWith('http://')
+    ) {
+      pronoteURL = `https://${pronoteURL}`
+    }
+
+    pronoteURL = new URL(pronoteURL)
+    // Clean any unwanted data from URL.
+    pronoteURL = new URL(
+      `${pronoteURL.protocol}//${pronoteURL.host}${pronoteURL.pathname}`
+    )
+
+    // Clear the last path if we're not main selection menu.
+    const paths = pronoteURL.pathname.split('/')
+    if (paths[paths.length - 1].includes('.html')) {
+      paths.pop()
+    }
+
+    // Rebuild URL with cleaned paths.
+    pronoteURL.pathname = paths.join('/')
+
+    // Return rebuilt URL without trailing slash.
+    return pronoteURL.href.endsWith('/')
+      ? pronoteURL.href.slice(0, -1)
+      : pronoteURL.href
+  }
 
 class PronoteContentScript extends ContentScript {
   async ensureAuthenticated({ account, trigger }) {
@@ -46,14 +78,19 @@ class PronoteContentScript extends ContentScript {
   }
 
   async requestUrl() {
+    await this.setWorkerState({ incognito: true })
     await this.goto(
-      'https://demo.index-education.net/pronote/mobile.eleve.html'
+      'data:text/html,' + encodeURIComponent(template)
     )
-    await this.waitForElementInWorker('nav')
+    await this.waitForElementInWorker('.MuiList-root')
     await this.setWorkerState({ visible: true })
-    const url = await this.evaluateInWorker(getUrlFromUser)
+    await this.waitForElementInWorker('.cozy-client-brige-url')
+    const json = await this.evaluateInWorker(() => {
+      return document.querySelector('.cozy-client-brige-url').innerText.trim()
+    })
+    const { url } = JSON.parse(json)
     await this.setWorkerState({ visible: false })
-    return url
+    return cleanURL(url)
   }
 
   async userAuthenticate() {
@@ -83,6 +120,7 @@ class PronoteContentScript extends ContentScript {
     }, UUID)
     await this.goto(`${url}/mobile.eleve.html?fd=1`)
 
+    await this.waitForDomReady()
     await this.setWorkerState({ visible: true })
     await this.runInWorkerUntilTrue({
       method: 'waitForLoginState'
@@ -292,35 +330,6 @@ async function getUrlFromUser() {
   `
     document.querySelector('nav')?.remove()
     document.querySelector('footer')?.remove()
-  }
-  function cleanURL(url) {
-    let pronoteURL = url
-    if (
-      !pronoteURL.startsWith('https://') &&
-      !pronoteURL.startsWith('http://')
-    ) {
-      pronoteURL = `https://${pronoteURL}`
-    }
-
-    pronoteURL = new URL(pronoteURL)
-    // Clean any unwanted data from URL.
-    pronoteURL = new URL(
-      `${pronoteURL.protocol}//${pronoteURL.host}${pronoteURL.pathname}`
-    )
-
-    // Clear the last path if we're not main selection menu.
-    const paths = pronoteURL.pathname.split('/')
-    if (paths[paths.length - 1].includes('.html')) {
-      paths.pop()
-    }
-
-    // Rebuild URL with cleaned paths.
-    pronoteURL.pathname = paths.join('/')
-
-    // Return rebuilt URL without trailing slash.
-    return pronoteURL.href.endsWith('/')
-      ? pronoteURL.href.slice(0, -1)
-      : pronoteURL.href
   }
 
   while (true) {
