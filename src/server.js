@@ -20,8 +20,8 @@ const SHOULD_GET_LESSON_CONTENT = false // ONLY for small requests, sends a requ
 const SAVES = [
   'timetable',
   'homeworks',
-  'grades'
-  // 'presence'
+  'grades',
+  'presence'
 ]
 
 // Fonction start qui va être exportée
