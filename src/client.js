@@ -78,6 +78,7 @@ class PronoteContentScript extends ContentScript {
   }
 
   async requestUrl() {
+    this.log('info', '🤖 requestUrl')
     await this.setWorkerState({ incognito: true })
     await this.goto(
       'data:text/html,' + encodeURIComponent(template)
@@ -93,7 +94,13 @@ class PronoteContentScript extends ContentScript {
     return cleanURL(url)
   }
 
+  async checkAuthenticated() {
+    this.log('info', '🤖 checkAuthenticated')
+    return false;
+  }
+
   async userAuthenticate() {
+    this.log('info', '🤖 userAuthenticate')
     await this.ensureNotAuthenticated()
     const url = await this.requestUrl()
     await this.goto(
@@ -139,16 +146,8 @@ class PronoteContentScript extends ContentScript {
   }
 
   async ensureNotAuthenticated() {
-    await this.goto(
-      'https://demo.index-education.net/pronote/mobile.eleve.html'
-    )
-    if (await this.isElementInWorker('.icon_off')) {
-      this.log('info', 'Authenticated in pronote demo. Disconnecting...')
-      await this.clickAndWait('.icon_off', 'main.deconnexion')
-      await this.goto(
-        'https://demo.index-education.net/pronote/mobile.eleve.html'
-      )
-    }
+    this.log('info', '🤖 ensureNotAuthenticated')
+    await this.setWorkerState({ incognito: true })
     return true
   }
 
@@ -185,13 +184,7 @@ class PronoteContentScript extends ContentScript {
         return Boolean(window.loginState)
       },
       {
-        interval: 1000,
-        timeout: {
-          milliseconds: 60 * 1000,
-          message: new TimeoutError(
-            `waitForLoginState timed out after ${60 * 1000}ms`
-          )
-        }
+        interval: 1000
       }
     )
     return true
@@ -204,151 +197,6 @@ connector
   .catch(err => {
     log.warn(err)
   })
-
-async function getUrlFromUser() {
-  window.filterSchools = function () {
-    window.setTimeout(() => {
-      // timeout to have the input field updated
-      const filter = document.querySelector('#filter').value
-      if (filter?.length > 0) {
-        document.querySelector('#schools').innerHTML = window.schoolPropositions
-          .filter(school => school.nomEtab.includes(filter.toUpperCase()))
-          .map(
-            school =>
-              `<option value="${school.url}">${school.nomEtab}</options>`
-          )
-          .join('\n')
-      } else {
-        document.querySelector('#schools').innerHTML = window.schoolPropositions
-          .map(
-            school =>
-              `<option value="${school.url}">${school.nomEtab}</options>`
-          )
-          .join('\n')
-      }
-    }, 10)
-  }
-  async function getSelectedSchool(schools) {
-    let schoolsTemplate = `
-  <label for="filter">Sélectionnez un établissement</label><br>
-  <input onchange="window.filterSchools()" onkeydown="window.filterSchools()" id="filter" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" class="full-width" />
-  <select style="${window.SELECT_STYLE}" id="schools" name="schools" size="5" class="full-width">`
-    schoolsTemplate += schools
-      .map(school => `<option value="${school.url}">${school.nomEtab}</option>`)
-      .join('\n')
-    schoolsTemplate += `</select>`
-    return getValues(
-      schoolsTemplate,
-      () => document.querySelector('#schools').value
-    )
-  }
-  async function getSchoolPropositions(city) {
-    const response = await fetch(
-      'https://www.index-education.com/swie/geoloc.php',
-      {
-        method: 'POST',
-        body: `data={"nomFonction":"geoLoc","lat":"${city.latitude}","long":"${city.longitude}"}`,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-        }
-      }
-    )
-    return await response.json()
-  }
-  async function getSelectedCity(cities) {
-    let citiesTemplate = `<label for="cities" class="">Sélectionnez une ville</label><br>
-  <select style="${window.SELECT_STYLE}" id="cities" name="cities" size="5" class="full-width">`
-    citiesTemplate += cities
-      .map(
-        city =>
-          `<option value="${city.id}">${city.name} (${city.postCode})</option>`
-      )
-      .join('\n')
-    citiesTemplate += `</select>`
-    return getValues(citiesTemplate, () =>
-      cities.find(city => city.id === document.querySelector('#cities').value)
-    )
-  }
-  async function getCityStringOrUrl() {
-    const template = `
-<div class="input-field">
-  <input id="url" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" class="full-width" />
-  <label for="url" class="">Saisissez directement l'url de votre ENT</label>
-</div>
-<div class="input-field">
-  <input id="ville" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" class="full-width" />
-  <label for="ville" class="">ou cherchez votre établissement par ville</label>
-</div>`
-    return getValues(template, () => ({
-      city: document.querySelector('#ville').value,
-      url: document.querySelector('#url').value
-    }))
-  }
-  async function getCitiesPropositions(cityString) {
-    const response = await fetch(
-      'https://api-adresse.data.gouv.fr/search/?type=municipality&limit=15&q=' +
-        cityString,
-      {
-        method: 'GET',
-        mode: 'cors'
-      }
-    )
-    const data = await response.json()
-    return data.features.map(feature => ({
-      id: feature.properties.id,
-      name: feature.properties.city,
-      postCode: feature.properties.postcode,
-      latitude: feature.geometry.coordinates[1],
-      longitude: feature.geometry.coordinates[0]
-    }))
-  }
-  async function getValues(template, getter) {
-    init()
-    document.querySelector('#body').innerHTML =
-      template +
-      `
-  <div class="btn-contain">
-  <button id="cancelButton" class="themeBoutonNeutre ieBouton ie-ripple NoWrap ieBoutonDefautSansImage AvecMain">Recommencer</button>
-  <button id="submitButton" class="themeBoutonPrimaire ieBouton ie-ripple NoWrap ieBoutonDefautSansImage AvecMain">Envoyer</button>
-</div>
-  `
-    return new Promise((resolve, reject) => {
-      document.querySelector('#cancelButton').addEventListener('click', () => {
-        reject('CANCEL')
-      })
-      document.querySelector('#submitButton').addEventListener('click', () => {
-        resolve(getter())
-      })
-    })
-  }
-  function init() {
-    document.querySelector('main').innerHTML = `
-  <fieldset class="login-contain">
-    <h3 class="logo_pronote"><span>PRONOTE</span></h3>
-    <div id="body" />
-  </fieldset>
-  `
-    document.querySelector('nav')?.remove()
-    document.querySelector('footer')?.remove()
-  }
-
-  while (true) {
-    try {
-      const { url, city } = await getCityStringOrUrl()
-      if (url) {
-        return cleanURL(url)
-      } else if (city) {
-        const citiesPropositions = await getCitiesPropositions(city)
-        const selectedCity = await getSelectedCity(citiesPropositions)
-        window.schoolPropositions = await getSchoolPropositions(selectedCity)
-        const url = await getSelectedSchool(window.schoolPropositions)
-        return url
-      }
-    } catch (err) {
-      console.error(`ERROR: ${err.message}`, err)
-    }
-  }
-}
 
 function monkeyPatch(uuid) {
   window.hookAccesDepuisAppli = function () {

@@ -33,10 +33,10 @@
   },
   "dependencies": {
     "@cozy/minilog": "1.0.0",
-    "cozy-client": "^48.8.0",
-    "cozy-clisk": "^0.38.0",
+    "cozy-client": "^60.9.0",
+    "cozy-clisk": "0.38.0",
     "cozy-flags": "^4.0.0",
-    "cozy-konnector-libs": "5.12.1",
+    "cozy-konnector-libs": "^5.13.0",
     "globals": "^15.8.0",
     "pawnote": "^1.6.2",
     "pronote-api-maintained": "^3.1.0",
